@@ -3,3 +3,5 @@ torchvision
 Pillow
 matplotlib
 numpy
+wandb
+gradio
