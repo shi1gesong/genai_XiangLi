@@ -8,9 +8,10 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms, utils
 from PIL import Image
+import wandb
 
 
-# ── Custom Dataset (no subfolder needed) ─────────────────────────────────────
+# ── Custom Dataset ─────────────────────────────────────────────────────────────
 class AnimeDataset(Dataset):
     def __init__(self, img_dir, transform=None):
         self.paths = glob.glob(os.path.join(img_dir, "*.jpg")) + \
@@ -26,10 +27,10 @@ class AnimeDataset(Dataset):
         img = Image.open(self.paths[idx]).convert("RGB")
         if self.transform:
             img = self.transform(img)
-        return img, 0  # 0 is a dummy label, VAE doesn't need labels
+        return img, 0
 
 
-# ── Model ─────────────────────────────────────────────────────────────────────
+# ── Model ──────────────────────────────────────────────────────────────────────
 class VAE(nn.Module):
     def __init__(self, latent_dim=128):
         super().__init__()
@@ -78,19 +79,21 @@ class VAE(nn.Module):
         return self.decode(z), mu, logvar
 
 
-# ── Loss ──────────────────────────────────────────────────────────────────────
+# ── Loss ───────────────────────────────────────────────────────────────────────
 def vae_loss(recon, x, mu, logvar, beta=1.0):
     recon_loss = F.binary_cross_entropy(recon, x, reduction="sum") / x.size(0)
     kl_loss    = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp()) / x.size(0)
     return recon_loss + beta * kl_loss, recon_loss, kl_loss
 
 
-# ── Utilities ─────────────────────────────────────────────────────────────────
+# ── Utilities ──────────────────────────────────────────────────────────────────
 @torch.no_grad()
 def save_samples(model, device, latent_dim, out_path, n=64):
     model.eval()
     z = torch.randn(n, latent_dim).to(device)
-    utils.save_image(model.decode(z), out_path, nrow=8)
+    samples = model.decode(z)
+    utils.save_image(samples, out_path, nrow=8)
+    return out_path
 
 
 @torch.no_grad()
@@ -100,41 +103,57 @@ def save_interpolation(model, device, latent_dim, out_path, steps=10):
     z2 = torch.randn(1, latent_dim).to(device)
     alphas = torch.linspace(0, 1, steps).to(device)
     zs = torch.cat([(1 - a) * z1 + a * z2 for a in alphas], dim=0)
-    utils.save_image(model.decode(zs), out_path, nrow=steps)
+    imgs = model.decode(zs)
+    utils.save_image(imgs, out_path, nrow=steps)
+    return out_path
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# ── Main ───────────────────────────────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir",    type=str,   default="data")
-    parser.add_argument("--epochs",      type=int,   default=50)
-    parser.add_argument("--batch_size",  type=int,   default=128)
-    parser.add_argument("--latent_dim",  type=int,   default=128)
-    parser.add_argument("--lr",          type=float, default=1e-3)
-    parser.add_argument("--beta",        type=float, default=1.0)
-    parser.add_argument("--image_size",  type=int,   default=64)
+    parser.add_argument("--data_dir",   type=str,   default="data/anime")
+    parser.add_argument("--epochs",     type=int,   default=50)
+    parser.add_argument("--batch_size", type=int,   default=128)
+    parser.add_argument("--latent_dim", type=int,   default=128)
+    parser.add_argument("--lr",         type=float, default=1e-3)
+    parser.add_argument("--beta",       type=float, default=1.0)
+    parser.add_argument("--image_size", type=int,   default=64)
     args = parser.parse_args()
 
-    # Device
+    # ── wandb init ────────────────────────────────────────────────────────────
+    wandb.init(
+        project="anime-vae",
+        config={
+            "epochs":      args.epochs,
+            "batch_size":  args.batch_size,
+            "latent_dim":  args.latent_dim,
+            "lr":          args.lr,
+            "beta":        args.beta,
+            "image_size":  args.image_size,
+        }
+    )
+
+    # ── Device ────────────────────────────────────────────────────────────────
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
 
     os.makedirs("results",     exist_ok=True)
     os.makedirs("checkpoints", exist_ok=True)
 
-    # Data
+    # ── Data ──────────────────────────────────────────────────────────────────
     transform = transforms.Compose([
         transforms.Resize((args.image_size, args.image_size)),
         transforms.ToTensor(),
     ])
     dataset    = AnimeDataset(args.data_dir, transform=transform)
-    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True, num_workers=4, pin_memory=True)
+    dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=True,
+                            num_workers=4, pin_memory=True)
 
-    # Model
+    # ── Model ─────────────────────────────────────────────────────────────────
     model     = VAE(latent_dim=args.latent_dim).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-    # Training loop
+    # ── Training loop ─────────────────────────────────────────────────────────
     for epoch in range(1, args.epochs + 1):
         model.train()
         total_loss = total_recon = total_kl = 0
@@ -152,19 +171,38 @@ def main():
             total_recon += recon_loss.item()
             total_kl    += kl_loss.item()
 
-        n = len(dataloader)
+        n         = len(dataloader)
+        avg_loss  = total_loss  / n
+        avg_recon = total_recon / n
+        avg_kl    = total_kl    / n
+
         print(
             f"Epoch [{epoch:>3}/{args.epochs}] "
-            f"Loss: {total_loss/n:.2f} | "
-            f"Recon: {total_recon/n:.2f} | "
-            f"KL: {total_kl/n:.2f}"
+            f"Loss: {avg_loss:.2f} | "
+            f"Recon: {avg_recon:.2f} | "
+            f"KL: {avg_kl:.2f}"
         )
 
-        save_samples(model, device, args.latent_dim, f"results/generated_epoch_{epoch:03d}.png")
+        # Save sample images every epoch
+        sample_path = f"results/generated_epoch_{epoch:03d}.png"
+        save_samples(model, device, args.latent_dim, sample_path)
 
-    # Final outputs
-    save_interpolation(model, device, args.latent_dim, "results/latent_interpolation.png")
+        # Log metrics + sample images to wandb
+        wandb.log({
+            "epoch":      epoch,
+            "loss":       avg_loss,
+            "recon_loss": avg_recon,
+            "kl_loss":    avg_kl,
+            "samples":    wandb.Image(sample_path),
+        })
+
+    # ── Final outputs ─────────────────────────────────────────────────────────
+    interp_path = "results/latent_interpolation.png"
+    save_interpolation(model, device, args.latent_dim, interp_path)
+    wandb.log({"latent_interpolation": wandb.Image(interp_path)})
+
     torch.save(model.state_dict(), "checkpoints/vae_anime_faces.pt")
+    wandb.finish()
     print("Training finished. Results saved to results/")
 
 
