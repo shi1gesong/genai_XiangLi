@@ -28,12 +28,10 @@ $$\mathcal{L} = \mathcal{L}_{recon} + \beta \cdot \mathcal{L}_{KL}$$
 
 ## 3. Extra Criteria
 
-### Latent Space Exploration
-Interpolation between two random latent vectors to visualize smooth transitions in the generated image space:
+### ✅ ML Operations — Metrics Tracking (wandb)
+Training metrics were tracked using **Weights & Biases (wandb)**, including loss, reconstruction loss, and KL divergence logged at every epoch, along with generated image samples.
 
-![Latent Interpolation](result/latent_interpolation.png)
-
-### Hyperparameter Tuning
+### ✅ Hyperparameter Tuning
 Tested the following configurations and compared their impact on generation quality:
 
 | Config | latent_dim | beta | epochs | Observation |
@@ -43,8 +41,20 @@ Tested the following configurations and compared their impact on generation qual
 
 Key finding: A higher beta value enforces stronger regularization on the latent space, producing more consistent outputs. Reducing beta allows more expressive generation but can reduce coherence.
 
-### Training Visualization
-Generated samples were saved at every epoch to track visual progress throughout training.
+### ✅ Latent Space Exploration
+Interpolation between two random latent vectors to visualize smooth transitions in the generated image space:
+
+![Latent Interpolation](result/latent_interpolation.png)
+
+### ✅ Gallery GUI (Gradio)
+An interactive web interface built with **Gradio** that allows users to:
+- Generate random anime faces by sampling from the latent space
+- Visualize smooth latent space interpolation between two faces
+
+Run with:
+```bash
+python app.py
+```
 
 ---
 
@@ -75,7 +85,12 @@ pip install -r requirements.txt
 python train_vae.py --data_dir data\anime --epochs 50 --batch_size 128 --latent_dim 128
 ```
 
-### Key arguments
+### Launch the Gallery GUI
+```bash
+python app.py
+```
+
+### Key training arguments
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `--data_dir` | `data` | Path to image folder |
@@ -94,11 +109,12 @@ python train_vae.py --data_dir data\anime --epochs 50 --batch_size 128 --latent_
 - NumPy
 - Matplotlib
 - Pillow
+- Weights & Biases (wandb)
+- Gradio
 
 ---
 
 ## 7. Future Improvements
 - Add a deeper convolutional VAE architecture with BatchNorm
 - Compare results with GAN or Diffusion Models
-- Build an interactive Gradio interface for face generation
-- Integrate Weights & Biases (wandb) for experiment tracking
+- Implement distributed training pipelines
