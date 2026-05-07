@@ -28,12 +28,12 @@ $$\mathcal{L} = \mathcal{L}_{recon} + \beta \cdot \mathcal{L}_{KL}$$
 
 ## 3. Extra Criteria
 
-### ✅ Latent Space Exploration
+### Latent Space Exploration
 Interpolation between two random latent vectors to visualize smooth transitions in the generated image space:
 
 ![Latent Interpolation](result/latent_interpolation.png)
 
-### ✅ Hyperparameter Tuning
+### Hyperparameter Tuning
 Tested the following configurations and compared their impact on generation quality:
 
 | Config | latent_dim | beta | epochs | Observation |
@@ -43,7 +43,7 @@ Tested the following configurations and compared their impact on generation qual
 
 Key finding: A higher beta value enforces stronger regularization on the latent space, producing more consistent outputs. Reducing beta allows more expressive generation but can reduce coherence.
 
-### ✅ Training Visualization
+### Training Visualization
 Generated samples were saved at every epoch to track visual progress throughout training.
 
 ---
