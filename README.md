@@ -33,7 +33,7 @@ Training metrics were tracked using **Weights & Biases (wandb)**, including loss
 
 📊 [View all training runs on W&B](https://wandb.ai/shi1gesong-northwestern-university/anime-vae)
 
-### ✅ Hyperparameter Tuning
+### Hyperparameter Tuning
 5 experiments were conducted to analyze the impact of different hyperparameters on generation quality:
 
 | Run | latent_dim | beta | lr | epochs | Observation |
@@ -50,13 +50,13 @@ Training metrics were tracked using **Weights & Biases (wandb)**, including loss
 - **latent_dim=128** outperforms latent_dim=64, which over-compresses the latent space and loses detail
 - **100 epochs** yields slightly better convergence than 50 epochs, confirming the model benefits from longer training
 
-### ✅ Latent Space Exploration
+### Latent Space Exploration
 Interpolation between two random latent vectors to visualize smooth transitions in the generated image space:
 
 ![Latent Interpolation](result/latent_interpolation.png)
 
 
-### ✅ Gallery GUI (Gradio)
+### Gallery GUI (Gradio)
 An interactive web interface built with **Gradio** that allows users to:
 - Generate random anime faces by sampling from the latent space
 - Visualize smooth latent space interpolation between two faces
