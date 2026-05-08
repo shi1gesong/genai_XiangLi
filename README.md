@@ -55,10 +55,13 @@ Interpolation between two random latent vectors to visualize smooth transitions 
 
 ![Latent Interpolation](result/latent_interpolation.png)
 
+
 ### ✅ Gallery GUI (Gradio)
 An interactive web interface built with **Gradio** that allows users to:
 - Generate random anime faces by sampling from the latent space
 - Visualize smooth latent space interpolation between two faces
+
+![Gradio GUI](result/gradio_demo.png)
 
 Run with:
 ```bash
@@ -66,7 +69,6 @@ python app.py
 ```
 
 ---
-
 ## 4. Results
 
 ### Generated Faces — Epoch 50 (Default: latent_dim=128, beta=1.0)
