@@ -31,15 +31,24 @@ $$\mathcal{L} = \mathcal{L}_{recon} + \beta \cdot \mathcal{L}_{KL}$$
 ### ✅ ML Operations — Metrics Tracking (wandb)
 Training metrics were tracked using **Weights & Biases (wandb)**, including loss, reconstruction loss, and KL divergence logged at every epoch, along with generated image samples.
 
+📊 [View all training runs on W&B](https://wandb.ai/shi1gesong-northwestern-university/anime-vae)
+
 ### ✅ Hyperparameter Tuning
-Tested the following configurations and compared their impact on generation quality:
+5 experiments were conducted to analyze the impact of different hyperparameters on generation quality:
 
-| Config | latent_dim | beta | epochs | Observation |
-|--------|-----------|------|--------|-------------|
-| Default | 128 | 1.0 | 50 | Consistent, stable results |
-| Tuned | 256 | 0.5 | 50 | More diverse but less structured |
+| Run | latent_dim | beta | lr | epochs | Observation |
+|-----|-----------|------|----|--------|-------------|
+| elated-spaceship-1 | 128 | 1.0 | 1e-3 | 50 | ✅ Stable baseline |
+| amber-river-2 | 128 | 1.0 | 1e-3 | 100 | ✅ Better convergence |
+| feasible-blaze-3 | 128 | 0.5 | 1e-3 | 50 | ❌ More diverse but less structured |
+| mild-grass-4 | 128 | 1.0 | 5e-4 | 50 | ❌ Slower convergence, slightly blurrier |
+| wise-puddle-5 | 64 | 1.0 | 1e-3 | 50 | ❌ Over-compressed, more blurry |
 
-Key finding: A higher beta value enforces stronger regularization on the latent space, producing more consistent outputs. Reducing beta allows more expressive generation but can reduce coherence.
+**Key findings:**
+- **beta=1.0** produces the most stable and coherent results; lowering beta (0.5) loosens KL regularization, increasing diversity but reducing quality
+- **lr=1e-3** converges faster and produces sharper results than lr=5e-4
+- **latent_dim=128** outperforms latent_dim=64, which over-compresses the latent space and loses detail
+- **100 epochs** yields slightly better convergence than 50 epochs, confirming the model benefits from longer training
 
 ### ✅ Latent Space Exploration
 Interpolation between two random latent vectors to visualize smooth transitions in the generated image space:
@@ -82,7 +91,7 @@ pip install -r requirements.txt
 
 ### Train the model
 ```bash
-python train_vae.py --data_dir data\anime --epochs 50 --batch_size 128 --latent_dim 128
+python train_vae.py --data_dir data\anime --epochs 100 --batch_size 128 --latent_dim 128
 ```
 
 ### Launch the Gallery GUI
